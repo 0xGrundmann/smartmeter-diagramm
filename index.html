@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SmartMeter Leistung</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f9f9f9; }
+    h2 { color: #333; }
+    canvas { background: #fff; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h2>Live-Leistung vom ESP8266</h2>
+  <p>Aktuelle Leistung in Watt vom Smart Meter:</p>
+  <canvas id="chart" width="600" height="300"></canvas>
+
+  <script>
+    const ESP_IP = "192.168.1.42"; // ⚠️ HIER DEINE ESP8266-IP EINTRAGEN
+
+    const data = {
+      labels: [],
+      datasets: [{
+        label: "Leistung (W)",
+        data: [],
+        borderColor: "blue",
+        backgroundColor: "rgba(0,0,255,0.1)",
+        fill: true
+      }]
+    };
+
+    const ctx = document.getElementById("chart").getContext("2d");
+    const chart = new Chart(ctx, {
+      type: "line",
+      data: data,
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: false,
+            title: {
+              display: true,
+              text: "Leistung (W)"
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: "Zeit"
+            }
+          }
+        }
+      }
+    });
+
+    async function fetchData() {
+      try {
+        const res = await fetch(`http://${ESP_IP}/data`);
+        const json = await res.json();
+        const now = new Date().toLocaleTimeString();
+        if (data.labels.length > 30) {
+          data.labels.shift();
+          data.datasets[0].data.shift();
+        }
+        data.labels.push(now);
+        data.datasets[0].data.push(json.leistung);
+        chart.update();
+      } catch (err) {
+        console.error("Fehler beim Abrufen der Daten:", err);
+      }
+    }
+
+    setInterval(fetchData, 2000);
+  </script>
+</body>
+</html>
